@@ -1,11 +1,14 @@
 using EPiServer.Cms.Shell;
 using EPiServer.Cms.UI.AspNetIdentity;
+using EPiServer.ContentApi.Cms;
+using EPiServer.OpenIDConnect;
 using EPiServer.Scheduler;
 using EPiServer.ServiceLocation;
 using EPiServer.Web.Routing;
 using Headless.Services;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Headless;
 
@@ -36,16 +39,41 @@ public class Startup
             .AddAdminUserRegistration()
             .AddEmbeddedLocalization<Startup>();
 
-        //todo:role to cdapi
-        services.AddContentDeliveryApi()
+        services.AddContentDeliveryApi(OpenIDConnectOptionsDefaults.AuthenticationScheme)
             .WithFriendlyUrl();
 
-        services.AddCommerceApi<ApplicationUser>(string.Empty);
+        services.AddCommerceApi<ApplicationUser>(OpenIDConnectOptionsDefaults.AuthenticationScheme);
 
         services.AddSingleton<DbContext, ApplicationDbContext<ApplicationUser>>();
         services.AddDbContext<ApplicationDbContext<ApplicationUser>>(options =>
             options.UseSqlServer(_configuration.GetConnectionString("EPiServerDB"))
         );
+
+        services.AddOpenIDConnect<ApplicationUser>(
+            useDevelopmentCertificate: true,
+            signingCertificate: null,
+            encryptionCertificate: null,
+            createSchema: true,
+            options =>
+            {
+                //options.RequireHttps = !_webHostingEnvironment.IsDevelopment();
+                var application = new OpenIDConnectApplication()
+                {
+                    ClientId = "postman-client",
+                    ClientSecret = "postman",
+                    Scopes =
+                    {
+                        ContentDeliveryApiOptionsDefaults.Scope,
+                    }
+                };
+
+                // Using Postman for testing purpose.
+                // The authorization code is sent to postman after successful authentication.
+                application.RedirectUris.Add(new Uri("https://oauth.pstmn.io/v1/callback"));
+                options.Applications.Add(application);
+                options.AllowResourceOwnerPasswordFlow = true;
+            });
+        services.AddOpenIDConnectUI();
 
         services.InitializeServices();
 
