@@ -20,20 +20,9 @@ namespace Headless.Features.Commerce.Products
             {
                 StatusCode = 200,
                 Data = product.Name,
-                Url = GetUrlAbsoluteFromInsideEPiServer(product.ContentLink, "en"),
+                Url = _urlResolver.GetUrl(product.ContentLink),
                 RedirectUrl = $"https://google.com",
             }));
-        }
-
-        private string GetUrlAbsoluteFromInsideEPiServer(ContentReference contentLink, string language)
-        {
-            var url = _urlResolver.GetUrl(contentLink: contentLink, language: language, virtualPathArguments: new VirtualPathArguments()
-            {
-                ContextMode = ContextMode.Default,
-                ForceAbsolute = true
-            });
-
-            return url.ToString();
         }
     }
 }
