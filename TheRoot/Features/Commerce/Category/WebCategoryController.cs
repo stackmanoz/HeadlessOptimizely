@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace Headless.Features.Commerce.Category
+namespace IDM.Application.Features.Commerce.Category
 {
     public class WebCategoryController : CommerceContentController<WebCategory>
     {

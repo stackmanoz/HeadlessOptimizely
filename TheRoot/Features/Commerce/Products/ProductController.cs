@@ -1,10 +1,7 @@
-﻿using EPiServer.Commerce.Catalog.ContentTypes;
-using EPiServer.Web;
-using EPiServer.Web.Mvc;
-using EPiServer.Web.Routing;
+﻿using EPiServer.Web.Routing;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Headless.Features.Commerce.Products
+namespace IDM.Application.Features.Commerce.Products
 {
     public class ProductController : CommerceContentController<GenericProduct>
     {

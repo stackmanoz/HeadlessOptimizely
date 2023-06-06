@@ -1,7 +1,7 @@
 ﻿using EPiServer.Commerce.Catalog.ContentTypes;
 using EPiServer.Commerce.Catalog.DataAnnotations;
 
-namespace Headless.Features.Commerce.Category
+namespace IDM.Application.Features.Commerce.Category
 {
     [CatalogContentType(
         DisplayName = "Web Category",

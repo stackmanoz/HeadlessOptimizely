@@ -2,7 +2,7 @@
 using EPiServer.Web.Mvc;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Headless.Features.CMS.Pages.ProductListingPage
+namespace IDM.Application.Features.CMS.Pages.ProductListingPage
 {
     public class ProductListingPageController : PageController<ProductListingPage>
     {

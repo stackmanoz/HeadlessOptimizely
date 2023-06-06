@@ -3,14 +3,13 @@ using EPiServer.Cms.UI.AspNetIdentity;
 using EPiServer.ContentApi.Cms;
 using EPiServer.OpenIDConnect;
 using EPiServer.Scheduler;
-using EPiServer.ServiceLocation;
 using EPiServer.Web.Routing;
-using Headless.Services;
+using IDM.Application.Services;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
-namespace Headless;
+namespace IDM.Application;
 
 public class Startup
 {
@@ -38,6 +37,13 @@ public class Startup
             .AddFind()
             .AddAdminUserRegistration()
             .AddEmbeddedLocalization<Startup>();
+
+        services.AddMvc()
+            .AddNewtonsoftJson(
+                options =>
+                {
+                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                });
 
         services.AddContentDeliveryApi(OpenIDConnectOptionsDefaults.AuthenticationScheme)
             .WithFriendlyUrl();
@@ -74,8 +80,9 @@ public class Startup
                 options.AllowResourceOwnerPasswordFlow = true;
             });
         services.AddOpenIDConnectUI();
+        services.AddKlarnaCheckout();
 
-        services.InitializeServices();
+        services.InitializeServices(_configuration);
 
         services.AddCors(options =>
         {

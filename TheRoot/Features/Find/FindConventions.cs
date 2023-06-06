@@ -5,7 +5,7 @@ using EPiServer.Find.Cms;
 using EPiServer.Find.Cms.Conventions;
 using EPiServer.Find.Commerce;
 
-namespace Headless.Features.Find
+namespace IDM.Application.Features.Find
 {
     public class FindConventions : CatalogContentClientConventions
     {

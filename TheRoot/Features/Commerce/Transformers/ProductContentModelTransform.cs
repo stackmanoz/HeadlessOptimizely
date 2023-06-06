@@ -3,7 +3,7 @@ using EPiServer.Cms.Shell.UI.Rest.Models.Transforms;
 using EPiServer.Commerce.Catalog.ContentTypes;
 using EPiServer.ServiceLocation;
 
-namespace Headless.Features.Commerce.Transformers
+namespace IDM.Application.Features.Commerce.Transformers
 {
     [ServiceConfiguration(typeof(IModelTransform), Lifecycle = ServiceInstanceScope.Singleton)]
     public class ProductContentModelTransform : TransformBase<ContentDataStoreModelBase>

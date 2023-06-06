@@ -1,31 +1,25 @@
-﻿using System.Globalization;
-using System.Web.Http;
-using EPiServer.Cms.UI.AspNetIdentity;
-using EPiServer.Framework.Localization;
+﻿using EPiServer.Cms.UI.AspNetIdentity;
+using IDM.Application.Services.Identity;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using System.Web.Http;
+using IDM.Shared.Models.Account;
 
-namespace Headless.Features.CMS.Pages.Account
+namespace IDM.Application.Features.CMS.Pages.Account
 {
     [Microsoft.AspNetCore.Mvc.Route("api/[Controller]")]
     public class AccountController : ApiController
     {
-        private readonly ApplicationUserManager<ApplicationUser> _userManager;
-        private readonly ApplicationSignInManager<ApplicationUser> _signInManager;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAccountManager _accountManager;
 
-        public AccountController(ApplicationUserManager<ApplicationUser> userManager,
-            ApplicationSignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor)
+        public AccountController(IAccountManager accountManager)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _httpContextAccessor = httpContextAccessor;
+            _accountManager = accountManager;
         }
 
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [Microsoft.AspNetCore.Mvc.Route(nameof(CreateUser))]
-        public async Task<IActionResult> CreateUser(string email, string userName, string password)
+        public async Task<IActionResult> CreateUser(string email, string password)
         {
             IPasswordHasher<PasswordHasherOptions> hasher = new PasswordHasher<PasswordHasherOptions>();
 
@@ -40,14 +34,14 @@ namespace Headless.Features.CMS.Pages.Account
                 EmailConfirmed = true,
                 LockoutEnabled = true,
                 IsApproved = true,
-                UserName = userName,
+                UserName = email,
                 PasswordHash = passwordHash,
                 NormalizedEmail = email,
-                NormalizedUserName = userName,
+                NormalizedUserName = email,
                 SecurityStamp = Guid.NewGuid().ToString()
             };
 
-            await _userManager.CreateAsync(applicationUser);
+            await _accountManager.UserManager.CreateAsync(applicationUser);
 
             return await Task.FromResult(new JsonResult(null));
         }
@@ -56,47 +50,46 @@ namespace Headless.Features.CMS.Pages.Account
         [Microsoft.AspNetCore.Mvc.Route(nameof(GetUserByEmail))]
         public async Task<IActionResult> GetUserByEmail(string email)
         {
-            var createdUser = _userManager.FindByEmailAsync(email);
+            var createdUser = _accountManager.UserManager.FindByEmailAsync(email);
             return await Task.FromResult(new JsonResult(createdUser));
         }
 
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [Microsoft.AspNetCore.Mvc.Route(nameof(Login))]
-        public async Task<IActionResult> Login(string email, string password)
+        public async Task<IActionResult> Login(AccountModel model)
         {
-            var user = _userManager.FindByEmailAsync(email).GetAwaiter().GetResult();
+            var user = _accountManager.UserManager.FindByEmailAsync(model.Email).GetAwaiter().GetResult();
             if (user is null)
             {
                 return new JsonResult(null);
             }
 
-            await _signInManager.SignOutAsync();
+            await _accountManager.SignInManager.SignOutAsync();
 
             var signInResult =
-                _signInManager.PasswordSignInAsync(user.UserName, password, true, false).GetAwaiter().GetResult();
+                _accountManager.SignInManager.PasswordSignInAsync(user.UserName, model.Password, model.IsPersistent, false).GetAwaiter().GetResult();
 
             if (!signInResult.Succeeded)
             {
                 return new JsonResult(new
                 {
-                    StatusCode = 200,
-                    Message = @"Login Password does not match",
-                    RedirectUrl = $"no login succeed",
+                    StatusCode = 405,
+                    Message = @"Login Password does not match"
                 });
             }
 
-            var identity = await _signInManager.GenerateUserIdentityAsync(user);
-            await _signInManager.SignInWithClaimsAsync(user, true, identity.Claims);
+            var identity = await _accountManager.SignInManager.GenerateUserIdentityAsync(user);
+            await _accountManager.SignInManager.SignInWithClaimsAsync(user, true, identity.Claims);
 
             user.LastLoginDate = DateTime.UtcNow;
-            _userManager.UpdateAsync(user).GetAwaiter().GetResult();
+            _accountManager.UserManager.UpdateAsync(user).GetAwaiter().GetResult();
 
             //todo:replace redirect url
             return new JsonResult(new
             {
                 StatusCode = 200,
-                Message = @"Login Successful",
-                RedirectUrl = $"https://google.com",
+                Data = user,
+                RedirectUrl = model.ReferelUrl,
             });
         }
 
@@ -104,9 +97,9 @@ namespace Headless.Features.CMS.Pages.Account
         [Microsoft.AspNetCore.Mvc.Route(nameof(Logout))]
         public async Task<IActionResult> Logout()
         {
-            if (_httpContextAccessor.HttpContext?.User.Identity is { IsAuthenticated: true })
+            if (_accountManager.IsAuthenticated)
             {
-                await _signInManager.SignOutAsync();
+                await _accountManager.SignInManager.SignOutAsync();
             }
 
             return new JsonResult(new

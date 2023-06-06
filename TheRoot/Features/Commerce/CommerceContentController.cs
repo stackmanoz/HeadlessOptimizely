@@ -5,7 +5,7 @@ using EPiServer.Web.Mvc;
 using Mediachase.Commerce.Catalog;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Headless.Features.Commerce
+namespace IDM.Application.Features.Commerce
 {
     [Authorize(AuthenticationSchemes = OpenIDConnectOptionsDefaults.AuthenticationScheme)]
     public abstract class CommerceContentController<T> : ContentController<T> where T : CatalogContentBase

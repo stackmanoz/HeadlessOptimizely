@@ -1,30 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import NavigationMenu from './Components/NavigationMenu';
+import React, { useState, useEffect } from "react";
+import LoginComponent from "./Components/Account/Login";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import "./App.css";
+import Layout from "./Components/Layout";
 
 function App() {
-    const [data, setData] = useState([]);
-    const porturl = "https://localhost:5000";
+  const [data, setData] = useState([]);
 
-    useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const response = await fetch(porturl + window.location.pathname);
-          const jsonData = await response.json();
-          setData(jsonData);
-        } catch (error) {
-          console.error('Error fetching data:', error);
-        }
-      };
-  
-      fetchData();
-    }, []);
+  useEffect(() => {}, []);
 
-    return (
-        <div>
-            <h1>Navigation Menu</h1>
-            <NavigationMenu data={data} />
-        </div>
-      );
+  return (
+    <div>
+      <Layout children={data} />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginComponent />}></Route>
+        </Routes>
+      </BrowserRouter>
+    </div>
+  );
 }
 
 export default App;

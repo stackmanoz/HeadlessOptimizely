@@ -1,4 +1,4 @@
-namespace Headless;
+namespace IDM.Application;
 
 public class Program
 {

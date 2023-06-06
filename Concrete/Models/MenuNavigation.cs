@@ -1,9 +1,9 @@
-﻿namespace Concrete.Models
+﻿namespace IDM.Shared.Models
 {
-    public class CustomerNavigationItem
+    public class WebNavigation
     {
         public string Url { get; set; }
         public string Name { get; set; }
-        public List<CustomerNavigationItem> Child { get; set; } = new();
+        public List<WebNavigation> Child { get; set; } = new();
     }
 }

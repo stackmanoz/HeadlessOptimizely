@@ -1,8 +1,8 @@
-﻿namespace Concrete.Models
+﻿namespace IDM.Shared.Models
 {
     public class CustomApplicationModel
     {
-        public List<CustomerNavigationItem> Navigation { get; set; }
+        public List<WebNavigation> Navigation { get; set; }
         public object Content { get; set; }
     }
 }
