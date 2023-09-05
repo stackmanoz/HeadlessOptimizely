@@ -1,9 +1,8 @@
-﻿using EPiServer.Commerce.Marketing;
-using EPiServer.Commerce.Reporting.Order;
-using EPiServer.Find;
-using EPiServer.Find.Cms;
-using EPiServer.Find.Cms.Conventions;
+﻿using EPiServer.Find;
+using EPiServer.Find.ClientConventions;
 using EPiServer.Find.Commerce;
+using IDM.Application.Features.Commerce.Products;
+using IDM.Application.Services.Product;
 
 namespace IDM.Application.Features.Find
 {
@@ -18,9 +17,12 @@ namespace IDM.Application.Features.Find
         public override void ApplyConventions(IClientConventions clientConventions)
         {
             base.ApplyConventions(clientConventions);
-            ContentIndexer.Instance.Conventions.ForInstancesOf<ContentFolder>().ShouldIndex(x => false);
-            ContentIndexer.Instance.Conventions.ForInstancesOf<SalesCampaignFolder>().ShouldIndex(x => false);
-            ContentIndexer.Instance.Conventions.ForInstancesOf<CommerceReportingFolder>().ShouldIndex(x => false);
+
+            clientConventions.TypeValidationConventions = new TypeValidationConventions();
+
+            #region catalogConventions
+            clientConventions.ForInstancesOf<GenericProduct>().ApplyProductConventions();
+            #endregion
         }
     }
 }

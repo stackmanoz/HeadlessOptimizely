@@ -1,15 +1,20 @@
 ﻿using EPiServer.Commerce.Catalog.ContentTypes;
 using EPiServer.Commerce.Marketing;
 using EPiServer.Commerce.Order;
+using EPiServer.Commerce.UI.Admin.Shipping.Internal;
+using EPiServer.Commerce.UI.Admin.Warehouses.Internal;
+using IDM.Application.Features.Commerce.Checkout.Helpers;
 using IDM.Application.Features.Commerce.Products;
 using IDM.Application.Features.Commerce.Variants;
 using Mediachase.Commerce;
 using Mediachase.Commerce.Catalog;
 using Mediachase.Commerce.Customers;
+using Mediachase.Commerce.Inventory;
 using Mediachase.Commerce.Orders;
 using Mediachase.Commerce.Pricing;
 using Microsoft.AspNetCore.Mvc;
 using System.Web.Http;
+using IDM.Application.Features.Commerce.Checkout.Services;
 
 namespace IDM.Application.Features.Commerce.Cart
 {
@@ -25,6 +30,9 @@ namespace IDM.Application.Features.Commerce.Cart
         private readonly ICurrentMarket _marketService;
         private readonly IContentLoader _contentLoader;
         private readonly IPromotionEngine _promotionEngine;
+        private readonly IShippingService _shippingService;
+        private readonly ILineItemCalculator _lineItemCalculator;
+        private readonly CustomerService _customerService;
 
         public CartController(IOrderRepository orderRepository,
             CustomerContext customerContext,
@@ -33,7 +41,7 @@ namespace IDM.Application.Features.Commerce.Cart
             IContentRepository contentRepository,
             IPriceService priceService,
             ICurrentMarket marketService,
-            IContentLoader contentLoader, IPromotionEngine promotionEngine)
+            IContentLoader contentLoader, IPromotionEngine promotionEngine, IShippingService shippingService, ILineItemCalculator lineItemCalculator, CustomerService customerService)
         {
             _orderRepository = orderRepository;
             _customerContext = customerContext;
@@ -44,26 +52,90 @@ namespace IDM.Application.Features.Commerce.Cart
             _marketService = marketService;
             _contentLoader = contentLoader;
             _promotionEngine = promotionEngine;
+            _shippingService = shippingService;
+            _lineItemCalculator = lineItemCalculator;
+            _customerService = customerService;
         }
 
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [Microsoft.AspNetCore.Mvc.Route(nameof(AddToCart))]
         public IActionResult AddToCart(string code, int quantity)
         {
-            var cart = _orderRepository.LoadOrCreateCart<ICart>(_customerContext.CurrentContactId, "Default");
-            var lineItem = cart.CreateLineItem(code, _orderGroupFactory);
-            SetDefaultLineItemValues(lineItem, quantity);
-            cart.AddLineItem(lineItem, _orderGroupFactory);
+            var cart = _orderRepository.LoadOrCreateCart<ICart>(_customerService.GetCustomerId(), "Default");
+            var variation = GetVariation(code);
+
+            if (variation != null) cart = AddToCart(cart, variation, 1);
+
             cart.ApplyDiscounts(_promotionEngine, new PromotionEngineSettings());
             _orderRepository.Save(cart);
             return new JsonResult(new { cart.Name });
         }
 
+        public ICart AddToCart(ICart cart, EntryContentBase entryContent, decimal quantity)
+        {
+            var result = new AddToCartResult();
+            var shippingMethod = _shippingService.ListShippingMethods("sv").FirstOrDefault(x => x.IsDefault && x.IsActive);
+
+            var form = cart.GetFirstForm();
+            if (form == null)
+            {
+                form = _orderGroupFactory.CreateOrderForm(cart);
+                form.Name = cart.Name;
+                cart.Forms.Add(form);
+            }
+
+            var shipment = cart.GetFirstShipment();
+
+            if (shipment == null || shipment.ShippingMethodId == Guid.Empty)
+            {
+                shipment.ShippingMethodId = shippingMethod.ShippingMethodId.GetValueOrDefault(Guid.Empty);
+            }
+
+            var lineItem = cart.GetAllLineItems().FirstOrDefault(x => x.Code == entryContent.Code);
+
+            if (lineItem == null)
+            {
+                lineItem = cart.CreateLineItem(entryContent.Code, _orderGroupFactory);
+                lineItem.DisplayName = entryContent.DisplayName;
+                lineItem.Quantity = quantity;
+                cart.AddLineItem(shipment, lineItem);
+            }
+            else
+            {
+                cart.UpdateLineItemQuantity(shipment, lineItem, lineItem.Quantity + quantity);
+            }
+
+            return cart;
+        }
+
+        private IOrderAddress GetOrderAddressFromWarehosue(ICart cart, WarehouseModel warehouse)
+        {
+            var address = _orderGroupFactory.CreateOrderAddress(cart);
+            address.Id = warehouse.Code;
+            address.City = warehouse.ContactInformation.City;
+            address.CountryCode = warehouse.ContactInformation.CountryCode;
+            address.CountryName = warehouse.ContactInformation.CountryName;
+            address.DaytimePhoneNumber = warehouse.ContactInformation.DaytimePhoneNumber;
+            address.Email = warehouse.ContactInformation.Email;
+            address.EveningPhoneNumber = warehouse.ContactInformation.EveningPhoneNumber;
+            address.FaxNumber = warehouse.ContactInformation.FaxNumber;
+            address.FirstName = warehouse.ContactInformation.FirstName;
+            address.LastName = warehouse.ContactInformation.LastName;
+            address.Line1 = warehouse.ContactInformation.Line1;
+            address.Line2 = warehouse.ContactInformation.Line2;
+            address.Organization = warehouse.ContactInformation.Organization;
+            address.PostalCode = warehouse.ContactInformation.PostalCode;
+            address.RegionName = warehouse.ContactInformation.RegionName;
+            address.RegionCode = warehouse.ContactInformation.RegionCode;
+            return address;
+        }
+
+
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [Microsoft.AspNetCore.Mvc.Route(nameof(ConvertToPurchaseOrder))]
         public IActionResult ConvertToPurchaseOrder()
         {
-            var cart = _orderRepository.LoadOrCreateCart<ICart>(_customerContext.CurrentContactId, "Default");
+            var cart = _orderRepository.LoadOrCreateCart<ICart>(_customerService.GetCustomerId(), "Default");
             cart.OrderStatus = OrderStatus.Completed;
             _orderRepository.SaveAsPurchaseOrder(cart);
             return new JsonResult(new { cart.Name });

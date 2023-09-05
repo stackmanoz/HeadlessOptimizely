@@ -1,23 +1,24 @@
-import React, { useState, useEffect } from "react";
-import LoginComponent from "./Components/Account/Login";
+import React from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import "./App.css";
+import LoginComponent from "./Components/Account/Login";
 import Layout from "./Components/Layout";
+import Home from "./Views/Home";
+import { StateProvider } from "./StateContext";
+
+import "./App.css";
 
 function App() {
-  const [data, setData] = useState([]);
-
-  useEffect(() => {}, []);
-
   return (
-    <div>
-      <Layout children={data} />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginComponent />}></Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <StateProvider>
+      <Layout>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginComponent />} />
+            <Route path="/" element={<Home />} />
+          </Routes>
+        </BrowserRouter>
+      </Layout>
+    </StateProvider>
   );
 }
 

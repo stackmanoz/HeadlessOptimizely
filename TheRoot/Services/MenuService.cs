@@ -1,11 +1,10 @@
 ﻿using EPiServer.Commerce.Catalog.ContentTypes;
 using EPiServer.Find;
 using EPiServer.Find.Cms;
-using EPiServer.Find.Framework;
 using EPiServer.Web.Routing;
 using IDM.Application.Features.Commerce.Category;
-using IDM.Infrastructure.Services.CatalogService;
 using IDM.Shared.Models;
+using Mediachase.Commerce.Catalog;
 
 namespace IDM.Application.Services
 {
@@ -13,16 +12,16 @@ namespace IDM.Application.Services
     {
         private readonly IContentLoader _contentLoader;
         private readonly UrlResolver _urlResolver;
-        private readonly ICatalogRootService _catalogRootService;
+        private readonly ReferenceConverter _referenceConverter;
         private readonly IClient _findClient;
 
         public MenuService(IContentLoader contentRepository,
-            UrlResolver urlResolver, ICatalogRootService catalogRootService, IClient findClient)
+            UrlResolver urlResolver, IClient findClient, ReferenceConverter referenceConverter)
         {
             _contentLoader = contentRepository;
             _urlResolver = urlResolver;
-            _catalogRootService = catalogRootService;
             _findClient = findClient;
+            _referenceConverter = referenceConverter;
         }
 
         public List<WebNavigation> GetCmsNavigation()
@@ -40,11 +39,13 @@ namespace IDM.Application.Services
 
         public List<WebNavigation> GetCommerceNavigation()
         {
-            var navigationItems = new List<WebNavigation>();
+            var rootLink = _referenceConverter.GetRootLink();
+            var catalogRef = _contentLoader.GetChildren<CatalogContent>(rootLink)
+                .FirstOrDefault(x => x.Name.ToLower() == "bharat");
 
-            var list = GetWebCategoriesWithSubcategories(_catalogRootService.GetCatalogRoot().CatalogId);
+            var list = GetWebCategoriesWithSubcategories(catalogRef.ContentLink.ID);
 
-            return list;
+            return list.ToList();
         }
 
         private void AddMenuRecursive(IEnumerable<PageData> menuLists, ICollection<WebNavigation> navigationItems)
@@ -85,36 +86,49 @@ namespace IDM.Application.Services
         public IEnumerable<WebNavigation> GetWebCategoriesWithSubcategories(int catalogId)
         {
             var query = _findClient
-                .Search<WebCategory>().Filter(x => x.CatalogId.Match(catalogId));
-            var results = query.GetResult();
+                .Search<WebCategory>().Filter(x => x.ParentLink.ID.Match(catalogId));
+            var results = query.GetContentResult();
 
             var webCategories = new List<WebNavigation>();
             foreach (var hit in results)
             {
                 if (hit == null) continue;
-                webCategories.Add(new WebNavigation()
+                var categoryItem = new WebNavigation()
                 {
                     Name = hit.DisplayName,
-                    Child = GetSubcategoriesRecursive(results.ToList(), hit),
-                    Url = _urlResolver.GetUrl(hit.ContentLink)
-                });
+                    Url = _urlResolver.GetUrl(hit.ContentLink),
+                };
+                GetSubcategoriesRecursive(hit, categoryItem);
+                webCategories.Add(categoryItem);
             }
 
             return webCategories;
         }
 
-        private List<WebNavigation> GetSubcategoriesRecursive(List<WebCategory> webCategories, WebCategory parentCategory)
+        public WebNavigation GetSubcategoriesRecursive(WebCategory hit,
+            WebNavigation categoryItem)
         {
             var query = _findClient
-                .Search<WebCategory>().Filter(x => x.ParentLink.ID.Match(parentCategory.ContentLink.ID));
-            var results = query.GetResult();
+                .Search<WebCategory>().Filter(x => x.ParentLink.ID.Match(hit.ContentLink.ID));
+            var results = query.GetContentResult();
 
-            foreach (var hit in results)
+            foreach (var innerHit in results)
             {
-                if (hit == null) continue;
-                webCategories.Add(hit);
-                GetSubcategoriesRecursive(webCategories, hit);
+                if (innerHit == null) continue;
+                var innerItem = new WebNavigation()
+                {
+                    Name = innerHit.DisplayName,
+                    Url = _urlResolver.GetUrl(innerHit.ContentLink)
+                };
+                categoryItem.Child.Add(innerItem);
+                var innerChild = _findClient
+                    .Search<WebCategory>().Filter(x => x.ParentLink.ID.Match(innerHit.ContentLink.ID))
+                    .GetContentResult();
+                if (innerChild != null && innerChild.Any())
+                    GetSubcategoriesRecursive(innerHit, innerItem);
             }
+
+            return categoryItem;
         }
     }
 }

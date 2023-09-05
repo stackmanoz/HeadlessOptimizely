@@ -1,110 +1,53 @@
-import React, { useState, useCallback } from "react";
-import "mdb-react-ui-kit/dist/css/mdb.dark.min.css";
-import {
-  MDBContainer,
-  MDBNavbar,
-  MDBNavbarBrand,
-  MDBNavbarToggler,
-  MDBIcon,
-  MDBNavbarNav,
-  MDBNavbarItem,
-  MDBNavbarLink,
-  MDBBtn,
-  MDBDropdown,
-  MDBDropdownToggle,
-  MDBDropdownMenu,
-  MDBDropdownItem,
-  MDBCollapse,
-} from "mdb-react-ui-kit";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import Button from "react-bootstrap/Button";
+import Container from "react-bootstrap/Container";
+import Nav from "react-bootstrap/Nav";
+import Navbar from "react-bootstrap/Navbar";
+import Form from "react-bootstrap/Form";
 
-const NavigationMenu = ({ data }) => {
-  const [showBasic, setShowBasic] = useState(false);
-
+const NavigationMenu = ({ navigation }) => {
   return (
-    <MDBNavbar expand="lg" dark bgColor="dark">
-      <MDBContainer fluid>
-        <MDBNavbarBrand href="#">Brand</MDBNavbarBrand>
-
-        <MDBNavbarToggler
-          aria-controls="navbarSupportedContent"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-          onClick={() => setShowBasic(!showBasic)}
-        >
-          <MDBIcon icon="bars" fas />
-        </MDBNavbarToggler>
-
-        <MDBCollapse navbar show={showBasic}>
-          <MDBNavbarNav className="mr-auto mb-2 mb-lg-0">
-            {data.commerceNavigation &&
-              data.commerceNavigation.map((item) => (
-                <MDBNavbarItem>
-                  <MDBNavbarLink active aria-current="page" href={item.url}>
-                    {item.name}
-                  </MDBNavbarLink>
-                  {item.child &&
-                    item.child.map((innerchild) => (
-                      <MDBDropdown>
-                        <MDBDropdownToggle
-                          tag="a"
-                          className="nav-link"
-                          role="button"
-                        >
-                          {innerchild.name}
-                        </MDBDropdownToggle>
-                        <MDBDropdownMenu>
-                          <MDBDropdownItem link>Action</MDBDropdownItem>
-                          <MDBDropdownItem link>Another action</MDBDropdownItem>
-                          <MDBDropdownItem link>
-                            Something else here
-                          </MDBDropdownItem>
-                        </MDBDropdownMenu>
-                      </MDBDropdown>
-                    ))}
-                </MDBNavbarItem>
+    <Navbar bg="dark" variant="dark">
+      <Container>
+        <Navbar.Brand href="/">
+          <img
+            src="https://getbootstrap.com/docs/5.2/assets/brand/bootstrap-logo.svg"
+            alt="Bootstrap"
+            width="30"
+            height="24"
+          ></img>
+          SKETCHY{" "}
+        </Navbar.Brand>
+        <Navbar.Toggle aria-controls="navbarScroll" />
+        <Navbar.Collapse id="navbarScroll">
+          <Nav
+            className="me-auto my-2 my-lg-0"
+            style={{ maxHeight: "100px" }}
+            navbarScroll
+          >
+            {navigation &&
+              navigation.map((item) => (
+                // <Link to={`/common/${item.url}`} key={item.name}>
+                //   {item.name}
+                // </Link>
+                <Nav.Link href={item.url} key={item.name}>
+                  {item.name}
+                </Nav.Link>
               ))}
-            <MDBNavbarItem>
-              <MDBNavbarLink href="/login">Link</MDBNavbarLink>
-            </MDBNavbarItem>
-
-            <MDBNavbarItem>
-              <MDBDropdown>
-                <MDBDropdownToggle tag="a" className="nav-link" role="button">
-                  Dropdown
-                </MDBDropdownToggle>
-                <MDBDropdownMenu>
-                  <MDBDropdownItem link>Action</MDBDropdownItem>
-                  <MDBDropdownItem link>Another action</MDBDropdownItem>
-                  <MDBDropdownItem link>Something else here</MDBDropdownItem>
-                </MDBDropdownMenu>
-              </MDBDropdown>
-            </MDBNavbarItem>
-
-            <MDBNavbarItem>
-              <MDBNavbarLink
-                disabled
-                href="#"
-                tabIndex={-1}
-                aria-disabled="true"
-              >
-                Disabled
-              </MDBNavbarLink>
-            </MDBNavbarItem>
-          </MDBNavbarNav>
-
-          <form className="d-flex input-group w-auto">
-            <input
+          </Nav>
+          <Form className="d-flex">
+            <Form.Control
               type="search"
-              className="form-control"
-              placeholder="Type query"
+              placeholder="Search"
+              className="me-2"
               aria-label="Search"
             />
-            <MDBBtn color="primary">Search</MDBBtn>
-          </form>
-        </MDBCollapse>
-      </MDBContainer>
-    </MDBNavbar>
+            <Button variant="outline-success">Search</Button>
+            <Nav.Link href="/login">Login</Nav.Link>
+          </Form>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 };
 export default NavigationMenu;

@@ -1,36 +1,101 @@
 ﻿using EPiServer.Commerce.Order;
+using EPiServer.Commerce.UI.Admin.Warehouses.Internal;
 using IDM.Application.Features.Commerce.Checkout.Services;
 using Klarna.Checkout;
 using Klarna.Checkout.Models;
 using Klarna.Common.Models;
+using Mediachase.Commerce;
+using Mediachase.Commerce.Customers;
 using Mediachase.Commerce.Markets;
+using Mediachase.Commerce.Orders;
 using Microsoft.AspNetCore.Mvc;
 
-namespace IDM.Application.Features.Commerce.Checkout.Api
+namespace IDM.Application.Features.Commerce.Checkout.Controllers
 {
     [Route("klarnacheckout")]
-    public class KlarnaCheckoutApiController : Controller
+    public class CheckoutController : Controller
     {
         private readonly IKlarnaCheckoutService _klarnaCheckoutService;
         private readonly IOrderRepository _orderRepository;
-        private readonly ICartService _cartService;
-        private readonly CheckoutService _checkoutService;
         private readonly IMarketService _marketService;
+        private readonly ICurrentMarket _currentMarket;
+        private readonly CustomerContext _customerContext;
+        private readonly CustomerService _customerService;
+        private readonly IOrderGroupFactory _orderGroupFactory;
 
-
-        public KlarnaCheckoutApiController(
+        public CheckoutController(
             IKlarnaCheckoutService klarnaCheckoutService,
             IOrderRepository orderRepository,
-            ICartService cartService,
-            CheckoutService checkoutService,
-            IMarketService marketService)
+            IMarketService marketService, CustomerContext customerContext, IOrderGroupFactory orderGroupFactory, CustomerService customerService, ICurrentMarket currentMarket)
         {
             _klarnaCheckoutService = klarnaCheckoutService;
             _orderRepository = orderRepository;
-            _cartService = cartService;
-            _checkoutService = checkoutService;
             _marketService = marketService;
+            _customerContext = customerContext;
+            _orderGroupFactory = orderGroupFactory;
+            _customerService = customerService;
+            _currentMarket = currentMarket;
         }
+
+        [HttpPost]
+        [Route(nameof(ProcessOrderPurchaseOrder))]
+        public IActionResult ProcessOrderPurchaseOrder()
+        {
+            try
+            {
+                var cart = _orderRepository.LoadOrCreateCart<ICart>(_customerService.GetCustomerId(), "Default", _currentMarket);
+                cart.OrderStatus = OrderStatus.InProgress;
+                SetCartCurrency(cart, cart.Currency);
+                _orderRepository.Save(cart);
+                var response = _klarnaCheckoutService.CreateOrUpdateOrder(cart);
+                var result = response.GetAwaiter().GetResult();
+                return new JsonResult(result);
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(ex.StackTrace);
+            }
+        }
+
+        public void SetCartCurrency(ICart cart, Currency currency)
+        {
+            if (currency.IsEmpty || currency == cart.Currency)
+            {
+                return;
+            }
+
+            cart.Currency = currency;
+            foreach (var lineItem in cart.GetAllLineItems())
+            {
+                // If there is an item which has no price in the new currency, a NullReference exception will be thrown.
+                // Mixing currencies in cart is not allowed.
+                // It's up to site's managers to ensure that all items have prices in allowed currency.
+                lineItem.PlacedPrice = PriceCalculationService.GetSalePrice(lineItem.Code, cart.MarketId, currency).UnitPrice.Amount;
+            }
+        }
+
+        private IOrderAddress GetOrderAddressFromWarehosue(ICart cart, WarehouseModel warehouse)
+        {
+            var address = _orderGroupFactory.CreateOrderAddress(cart);
+            address.Id = warehouse.Code;
+            address.City = warehouse.ContactInformation.City;
+            address.CountryCode = warehouse.ContactInformation.CountryCode;
+            address.CountryName = warehouse.ContactInformation.CountryName;
+            address.DaytimePhoneNumber = warehouse.ContactInformation.DaytimePhoneNumber;
+            address.Email = warehouse.ContactInformation.Email;
+            address.EveningPhoneNumber = warehouse.ContactInformation.EveningPhoneNumber;
+            address.FaxNumber = warehouse.ContactInformation.FaxNumber;
+            address.FirstName = warehouse.ContactInformation.FirstName;
+            address.LastName = warehouse.ContactInformation.LastName;
+            address.Line1 = warehouse.ContactInformation.Line1;
+            address.Line2 = warehouse.ContactInformation.Line2;
+            address.Organization = warehouse.ContactInformation.Organization;
+            address.PostalCode = warehouse.ContactInformation.PostalCode;
+            address.RegionName = warehouse.ContactInformation.RegionName;
+            address.RegionCode = warehouse.ContactInformation.RegionCode;
+            return address;
+        }
+
 
         [Route("cart/{orderGroupId}/shippingoptionupdate")]
         [HttpPost]
@@ -60,15 +125,15 @@ namespace IDM.Application.Features.Commerce.Checkout.Api
         {
             // More information: https://docs.klarna.com/klarna-checkout/popular-use-cases/validate-order/
 
-            var cart = _orderRepository.Load<ICart>(orderGroupId);
+            //var cart = _orderRepository.Load<ICart>(orderGroupId);
 
-            // Validate cart lineitems
-            var validationIssues = _cartService.ValidateCart(cart);
-            if (validationIssues.Any())
-            {
-                // check validation issues and redirect to a page to display the error
-                return Redirect("/en/error-pages/checkout-something-went-wrong/");
-            }
+            //// Validate cart lineitems
+            //var validationIssues = _cartService.ValidateCart(cart);
+            //if (validationIssues.Any())
+            //{
+            //    // check validation issues and redirect to a page to display the error
+            //    return Redirect("/en/error-pages/checkout-something-went-wrong/");
+            //}
 
             // Validate billing address if necessary (this is just an example)
             // To return an error like this you need require_validate_callback_success set to true
@@ -83,10 +148,10 @@ namespace IDM.Application.Features.Commerce.Checkout.Api
             }
 
             // Validate order amount, shipping address
-            if (!_klarnaCheckoutService.ValidateOrder(cart, checkoutData))
-            {
-                return Redirect("/en/error-pages/checkout-something-went-wrong/");
-            }
+            //if (!_klarnaCheckoutService.ValidateOrder(cart, checkoutData))
+            //{
+            //    return Redirect("/en/error-pages/checkout-something-went-wrong/");
+            //}
 
             return Ok();
         }
@@ -149,7 +214,7 @@ namespace IDM.Application.Features.Commerce.Checkout.Api
                 // Won't create order, Klarna checkout not complete
                 return null;
             }
-            purchaseOrder = await _checkoutService.CreatePurchaseOrderForKlarna(klarnaOrderId, order, cart).ConfigureAwait(false);
+            //purchaseOrder = await _checkoutService.CreatePurchaseOrderForKlarna(klarnaOrderId, order, cart).ConfigureAwait(false);
             return purchaseOrder;
         }
     }

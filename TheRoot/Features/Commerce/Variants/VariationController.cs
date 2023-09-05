@@ -1,27 +1,22 @@
-﻿using EPiServer.Web.Routing;
+﻿using IDM.Application.Services.ContentModel;
+using IDM.Application.Services.Variant;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IDM.Application.Features.Commerce.Variants
 {
     public class VariationController : CommerceContentController<GenericVariant>
     {
-        private readonly UrlResolver _urlResolver;
+        private readonly IVariantService _variantService;
 
-        public VariationController(UrlResolver urlResolver)
+        public VariationController(IVariantService variantService)
         {
-            _urlResolver = urlResolver;
+            _variantService = variantService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(GenericVariant product)
+        public async Task<IActionResult> Index(GenericVariant variant)
         {
-            return await Task.FromResult(new JsonResult(new
-            {
-                StatusCode = 200,
-                Data = product.Name,
-                Url = _urlResolver.GetUrl(product.ContentLink),
-                RedirectUrl = $"https://google.com",
-            }));
+            return new JsonResult(ContentViewModel.Create(_variantService.ToVariantModel(variant)));
         }
     }
 }

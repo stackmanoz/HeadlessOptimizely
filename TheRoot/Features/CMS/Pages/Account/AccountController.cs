@@ -1,4 +1,5 @@
-﻿using EPiServer.Cms.UI.AspNetIdentity;
+﻿using System.Net;
+using EPiServer.Cms.UI.AspNetIdentity;
 using IDM.Application.Services.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -88,8 +89,12 @@ namespace IDM.Application.Features.CMS.Pages.Account
             return new JsonResult(new
             {
                 StatusCode = 200,
-                Data = user,
-                RedirectUrl = model.ReferelUrl,
+                Data = new
+                {
+                    UserId = user.Id,
+                    Email = user.Email
+                },
+                RedirectUrl = "/",
             });
         }
 
@@ -108,6 +113,19 @@ namespace IDM.Application.Features.CMS.Pages.Account
                 Message = @"Logout Successful",
                 RedirectUrl = $"https://google.com",
             });
+        }
+
+        [Microsoft.AspNetCore.Mvc.HttpGet]
+        [Microsoft.AspNetCore.Mvc.Route(nameof(Render))]
+        public IActionResult Render()
+        {
+            var html = System.IO.File.ReadAllText(@"klarna.html");
+            return new ContentResult
+            {
+                Content = html,
+                ContentType = "text/html",
+                StatusCode = 200
+            };
         }
     }
 }

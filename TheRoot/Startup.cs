@@ -5,6 +5,7 @@ using EPiServer.OpenIDConnect;
 using EPiServer.Scheduler;
 using EPiServer.Web.Routing;
 using IDM.Application.Services;
+using Klarna.Common.Configuration;
 using Mediachase.Commerce.Anonymous;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -44,7 +45,7 @@ public class Startup
                 {
                     options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                 });
-
+        services.AddSession();
         services.AddContentDeliveryApi(OpenIDConnectOptionsDefaults.AuthenticationScheme)
             .WithFriendlyUrl();
 
@@ -81,7 +82,9 @@ public class Startup
             });
         services.AddOpenIDConnectUI();
         services.AddKlarnaCheckout();
-
+        services.Configure<CheckoutConfiguration>("EU", _configuration.GetSection("Klarna:Checkout:EU"));
+        services.Configure<CheckoutConfiguration>("US", _configuration.GetSection("Klarna:Checkout:US"));
+        services.Configure<CheckoutConfiguration>("DEFAULT", _configuration.GetSection("Klarna:Checkout:US"));
         services.InitializeServices(_configuration);
 
         services.AddCors(options =>
@@ -111,6 +114,7 @@ public class Startup
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseSession();
 
         app.UseEndpoints(endpoints =>
         {

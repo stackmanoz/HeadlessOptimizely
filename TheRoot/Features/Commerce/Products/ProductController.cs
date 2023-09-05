@@ -1,25 +1,20 @@
-﻿using EPiServer.Web.Routing;
+﻿using IDM.Application.Services.ContentModel;
+using IDM.Application.Services.Product;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IDM.Application.Features.Commerce.Products
 {
     public class ProductController : CommerceContentController<GenericProduct>
     {
-        private readonly UrlResolver _urlResolver;
+        private readonly IProductService _productService;
 
-        public ProductController(UrlResolver urlResolver)
+        public ProductController(IProductService productService)
         {
-            _urlResolver = urlResolver;
+            _productService = productService;
         }
         public async Task<IActionResult> Index(GenericProduct product)
         {
-            return await Task.FromResult(new JsonResult(new
-            {
-                StatusCode = 200,
-                Data = product.Name,
-                Url = _urlResolver.GetUrl(product.ContentLink),
-                RedirectUrl = $"https://google.com",
-            }));
+            return new JsonResult(ContentViewModel.Create(_productService.ToProductModel(product)));
         }
     }
 }
